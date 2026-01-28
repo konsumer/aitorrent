@@ -1,5 +1,7 @@
 This an LLM-based torrent-manager. It has access to your Plex library and qbittorrent client, so it knows what you have and what you want.
 
+[![asciicast](https://asciinema.org/a/lSxwZnB6zOWPHIrn.svg)](https://asciinema.org/a/lSxwZnB6zOWPHIrn)
+
 Give it a prompt like this:
 
 ```md
