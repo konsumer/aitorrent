@@ -18,13 +18,31 @@ This should setup RSS filters for "Star Trek: Strange New Worlds" and fill in yo
 
 1. Make sure you have qbittorrent webui running, and plex. I have setup a docker-compose I use for this [here](https://github.com/konsumer/media-llm-server). You don't have to do it just like me, but it has everything you need to use this with your favorite LLM, and your media, and your safe VPN'd torrent-downloader.
 
-2. Install dependencies:
+2. Install aitorrent:
 
+   **Option A: Standard pip install (development)**
    ```sh
-   pip install -r requirements.txt
+   pip install -e .
    ```
 
-3. Configure Plex credentials:
+   **Option B: pipx (recommended for CLI tools)**
+   ```sh
+   pipx install .
+   ```
+
+   **Option C: uv (modern, fast alternative)**
+   ```sh
+   uv pip install .
+   # Or run without installing:
+   uvx --from . aitorrent-plex-cli list
+   ```
+
+   After installation, you'll have these commands available:
+   - `aitorrent-plex` / `aitorrent-plex-cli` - Plex MCP server / CLI
+   - `aitorrent-tmdb` / `aitorrent-tmdb-cli` - TMDB MCP server / CLI
+   - `aitorrent-qbt` / `aitorrent-qbt-cli` - qBittorrent MCP server / CLI
+
+3. Configure credentials:
 
    ```sh
    cp .env.example .env
@@ -137,8 +155,7 @@ Add to your LLMs MCP settings (`~/.claude.json`):
 {
   "mcpServers": {
     "plex-info": {
-      "command": "python3",
-      "args": ["/path/to/aitorrent/plexinfo.py", "mcp"],
+      "command": "aitorrent-plex",
       "env": {
         "PLEX_URL": "http://localhost:32400",
         "PLEX_TOKEN": "your_plex_token_here",
@@ -146,15 +163,13 @@ Add to your LLMs MCP settings (`~/.claude.json`):
       }
     },
     "tmdb-info": {
-      "command": "python3",
-      "args": ["/path/to/aitorrent/tmdbinfo.py", "mcp"],
+      "command": "aitorrent-tmdb",
       "env": {
         "TMDB_API_KEY": "your_tmdb_api_key_here"
       }
     },
     "qbt-info": {
-      "command": "python3",
-      "args": ["/path/to/aitorrent/qbtinfo.py", "mcp"],
+      "command": "aitorrent-qbt",
       "env": {
         "QBT_URL": "http://localhost:8080",
         "QBT_USERNAME": "admin",
@@ -165,24 +180,24 @@ Add to your LLMs MCP settings (`~/.claude.json`):
 }
 ```
 
-With claude-code, you can do this, too, and it has scope-options for projects and stuff:
+With Claude Code, you can do this, too:
 
 ```sh
 claude mcp add plex-info --transport stdio \
   --env PLEX_URL=http://localhost:32400 \
   --env PLEX_TOKEN=your_plex_token_here \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- python3 $(pwd)/plexinfo.py mcp
+  -- aitorrent-plex
 
 claude mcp add tmdb-info --transport stdio \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- python3 $(pwd)/tmdbinfo.py mcp
+  -- aitorrent-tmdb
 
 claude mcp add qbt-info --transport stdio \
   --env QBT_URL=http://localhost:8080 \
   --env QBT_USERNAME=admin \
   --env QBT_PASSWORD=adminadmin \
-  -- python3 $(pwd)/qbtinfo.py mcp
+  -- aitorrent-qbt
 ```
 
 The LLM will have access to these tools:

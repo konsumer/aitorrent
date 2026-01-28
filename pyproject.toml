@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aitorrent"
+version = "0.1.0"
+description = "AI-powered media downloader with Plex, TMDB, and qBittorrent integration"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "David Konsumer", email = "konsumer@jetboystudio.com"}
+]
+dependencies = [
+    "PlexAPI>=4.15.0",
+    "mcp>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "tmdbv3api>=1.9.0",
+    "qbittorrent-api>=2024.1.59",
+]
+
+[project.scripts]
+aitorrent-plex = "plexinfo:mcp_main"
+aitorrent-tmdb = "tmdbinfo:mcp_main"
+aitorrent-qbt = "qbtinfo:mcp_main"
+aitorrent-plex-cli = "plexinfo:cli_main"
+aitorrent-tmdb-cli = "tmdbinfo:cli_main"
+aitorrent-qbt-cli = "qbtinfo:cli_main"
+
+[project.urls]
+Homepage = "https://github.com/konsumer/aitorrent"
+Repository = "https://github.com/konsumer/aitorrent"
