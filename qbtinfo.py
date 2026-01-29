@@ -198,6 +198,64 @@ class QbtInfo:
         except Exception as e:
             return {'status': 'error', 'message': f"Failed to create category: {str(e)}"}
 
+    def get_rss_feeds(self, with_data: bool = False) -> Dict[str, Any]:
+        """
+        Get all RSS feeds and folders.
+
+        Args:
+            with_data: If True, include feed items/articles
+        """
+        try:
+            feeds = self.client.rss_items(with_data=with_data)
+            return {'feeds': dict(feeds)}
+        except Exception as e:
+            return {'error': f"Failed to get RSS feeds: {str(e)}"}
+
+    def add_rss_feed(self, url: str, path: Optional[str] = None) -> Dict[str, str]:
+        """
+        Add a new RSS feed.
+
+        Args:
+            url: RSS feed URL
+            path: Optional folder path (e.g., "folder1" or "folder1\\subfolder")
+        """
+        try:
+            item_path = f"{path}\\{url}" if path else url
+            self.client.rss_add_feed(url=url, item_path=item_path)
+            return {'status': 'success', 'message': f"RSS feed added: {url}"}
+        except Exception as e:
+            return {'status': 'error', 'message': f"Failed to add RSS feed: {str(e)}"}
+
+    def remove_rss_feed(self, path: str) -> Dict[str, str]:
+        """
+        Remove an RSS feed or folder.
+
+        Args:
+            path: Path to the feed or folder (e.g., "folder1\\feedname")
+        """
+        try:
+            self.client.rss_remove_item(item_path=path)
+            return {'status': 'success', 'message': f"RSS item removed: {path}"}
+        except Exception as e:
+            return {'status': 'error', 'message': f"Failed to remove RSS item: {str(e)}"}
+
+    def refresh_rss_feed(self, path: Optional[str] = None) -> Dict[str, str]:
+        """
+        Refresh RSS feed(s).
+
+        Args:
+            path: Optional path to specific feed. If None, refreshes all feeds.
+        """
+        try:
+            if path:
+                self.client.rss_refresh_item(item_path=path)
+                return {'status': 'success', 'message': f"RSS feed refreshed: {path}"}
+            else:
+                self.client.rss_refresh_item()
+                return {'status': 'success', 'message': "All RSS feeds refreshed"}
+        except Exception as e:
+            return {'status': 'error', 'message': f"Failed to refresh RSS feed: {str(e)}"}
+
     def get_rss_rules(self) -> Dict[str, Any]:
         """Get all RSS auto-download rules."""
         try:
@@ -214,6 +272,41 @@ class QbtInfo:
         except Exception as e:
             return {'status': 'error', 'message': f"Failed to create RSS rule: {str(e)}"}
 
+    def update_rss_rule(self, rule_name: str, rule_def: Dict[str, Any]) -> Dict[str, str]:
+        """Update an existing RSS auto-download rule."""
+        try:
+            self.client.rss_set_rule(rule_name=rule_name, rule_def=rule_def)
+            return {'status': 'success', 'message': f"RSS rule '{rule_name}' updated"}
+        except Exception as e:
+            return {'status': 'error', 'message': f"Failed to update RSS rule: {str(e)}"}
+
+    def attach_rule_to_feeds(self, rule_name: str, feed_paths: List[str]) -> Dict[str, str]:
+        """
+        Attach an RSS rule to specific feeds.
+
+        Args:
+            rule_name: Name of the RSS rule
+            feed_paths: List of feed paths to attach the rule to (e.g., ["folder\\feed1", "feed2"])
+        """
+        try:
+            # Get existing rule
+            rules = self.client.rss_rules()
+            if rule_name not in rules:
+                return {'status': 'error', 'message': f"Rule '{rule_name}' not found"}
+
+            rule_def = dict(rules[rule_name])
+            rule_def['affectedFeeds'] = feed_paths
+
+            # Update rule with new feed attachments
+            self.client.rss_set_rule(rule_name=rule_name, rule_def=rule_def)
+            return {
+                'status': 'success',
+                'message': f"Rule '{rule_name}' attached to {len(feed_paths)} feed(s)",
+                'feeds': feed_paths
+            }
+        except Exception as e:
+            return {'status': 'error', 'message': f"Failed to attach rule to feeds: {str(e)}"}
+
     def delete_rss_rule(self, rule_name: str) -> Dict[str, str]:
         """Delete an RSS auto-download rule."""
         try:
@@ -224,7 +317,8 @@ class QbtInfo:
 
     def create_show_rss_rule(self, show_name: str, season: Optional[int] = None,
                             quality: str = "1080p", category: Optional[str] = None,
-                            save_path: Optional[str] = None) -> Dict[str, str]:
+                            save_path: Optional[str] = None,
+                            feed_paths: Optional[List[str]] = None) -> Dict[str, str]:
         """
         Create an RSS rule for a TV show that will auto-download new episodes.
 
@@ -234,6 +328,8 @@ class QbtInfo:
             quality: Quality preference (default: 1080p)
             category: Category to assign downloaded torrents to
             save_path: Path to save downloads
+            feed_paths: Optional list of feed paths to attach this rule to (e.g., ["folder\\feed1"])
+                       If None or empty, applies to all feeds
         """
         try:
             # Build the filter pattern
@@ -254,7 +350,7 @@ class QbtInfo:
                 'episodeFilter': '',
                 'smartFilter': False,
                 'previouslyMatchedEpisodes': [],
-                'affectedFeeds': [],  # Apply to all feeds
+                'affectedFeeds': feed_paths if feed_paths else [],  # Specific feeds or all feeds
                 'ignoreDays': 0,
                 'lastMatch': '',
                 'addPaused': False,
@@ -272,7 +368,8 @@ class QbtInfo:
                 'status': 'success',
                 'message': f"RSS rule created for {show_name}",
                 'rule_name': rule_name,
-                'filter_pattern': filter_pattern
+                'filter_pattern': filter_pattern,
+                'attached_feeds': feed_paths if feed_paths else 'all'
             }
 
         except Exception as e:
@@ -549,10 +646,23 @@ def cli_main():
     search_parser.add_argument('--category', default='all', help='Category filter (default: all)')
 
     # RSS command
-    rss_parser = subparsers.add_parser('rss', help='Manage RSS rules')
+    rss_parser = subparsers.add_parser('rss', help='Manage RSS feeds and rules')
     rss_subparsers = rss_parser.add_subparsers(dest='rss_command')
 
-    rss_list = rss_subparsers.add_parser('list', help='List RSS rules')
+    rss_list_feeds = rss_subparsers.add_parser('list-feeds', help='List RSS feeds')
+    rss_list_feeds.add_argument('--with-data', action='store_true', help='Include feed items/articles')
+
+    rss_add_feed = rss_subparsers.add_parser('add-feed', help='Add RSS feed')
+    rss_add_feed.add_argument('url', help='RSS feed URL')
+    rss_add_feed.add_argument('--folder', help='Folder path (e.g., "TV Shows")')
+
+    rss_remove_feed = rss_subparsers.add_parser('remove-feed', help='Remove RSS feed or folder')
+    rss_remove_feed.add_argument('path', help='Path to feed or folder')
+
+    rss_refresh = rss_subparsers.add_parser('refresh', help='Refresh RSS feeds')
+    rss_refresh.add_argument('--path', help='Optional: specific feed path to refresh')
+
+    rss_list_rules = rss_subparsers.add_parser('list-rules', help='List RSS rules')
 
     rss_add_show = rss_subparsers.add_parser('add-show', help='Add RSS rule for a show')
     rss_add_show.add_argument('show_name', help='Name of the show')
@@ -560,6 +670,11 @@ def cli_main():
     rss_add_show.add_argument('--quality', default='1080p', help='Quality (default: 1080p)')
     rss_add_show.add_argument('--category', help='Category')
     rss_add_show.add_argument('--path', help='Save path')
+    rss_add_show.add_argument('--feeds', help='Comma-separated feed paths to attach rule to')
+
+    rss_attach = rss_subparsers.add_parser('attach-rule', help='Attach rule to feeds')
+    rss_attach.add_argument('rule_name', help='Name of the rule')
+    rss_attach.add_argument('feeds', help='Comma-separated feed paths')
 
     # Connection args
     parser.add_argument('--url', help='qBittorrent URL (e.g. http://localhost:8080) or set QBT_URL env var')
@@ -618,7 +733,32 @@ def cli_main():
                     print("")
 
         elif args.command == 'rss':
-            if args.rss_command == 'list':
+            if args.rss_command == 'list-feeds':
+                feeds = qbt.get_rss_feeds(with_data=args.with_data)
+                if 'error' in feeds:
+                    print(f"Error: {feeds['error']}", file=sys.stderr)
+                    sys.exit(1)
+
+                print("RSS Feeds:", "")
+                if not feeds['feeds']:
+                    print("  No feeds configured")
+                else:
+                    import json
+                    print(json.dumps(feeds['feeds'], indent=2))
+
+            elif args.rss_command == 'add-feed':
+                result = qbt.add_rss_feed(args.url, path=args.folder)
+                print(f"{result['status'].upper()}: {result['message']}")
+
+            elif args.rss_command == 'remove-feed':
+                result = qbt.remove_rss_feed(args.path)
+                print(f"{result['status'].upper()}: {result['message']}")
+
+            elif args.rss_command == 'refresh':
+                result = qbt.refresh_rss_feed(path=args.path)
+                print(f"{result['status'].upper()}: {result['message']}")
+
+            elif args.rss_command == 'list-rules':
                 rules = qbt.get_rss_rules()
                 if 'error' in rules:
                     print(f"Error: {rules['error']}", file=sys.stderr)
@@ -634,20 +774,32 @@ def cli_main():
                             print(f"  Filter: {rule['mustContain']}")
                         if 'assignedCategory' in rule and rule['assignedCategory']:
                             print(f"  Category: {rule['assignedCategory']}")
+                        if 'affectedFeeds' in rule and rule['affectedFeeds']:
+                            print(f"  Attached to: {', '.join(rule['affectedFeeds'])}")
                         print("")
 
             elif args.rss_command == 'add-show':
+                feed_paths = args.feeds.split(',') if args.feeds else None
                 result = qbt.create_show_rss_rule(
                     args.show_name,
                     season=args.season,
                     quality=args.quality,
                     category=args.category,
-                    save_path=args.path
+                    save_path=args.path,
+                    feed_paths=feed_paths
                 )
                 print(f"{result['status'].upper()}: {result['message']}")
                 if result['status'] == 'success':
                     print(f"Rule name: {result['rule_name']}")
                     print(f"Filter pattern: {result['filter_pattern']}")
+                    print(f"Attached to feeds: {result['attached_feeds']}")
+
+            elif args.rss_command == 'attach-rule':
+                feed_paths = args.feeds.split(',')
+                result = qbt.attach_rule_to_feeds(args.rule_name, feed_paths)
+                print(f"{result['status'].upper()}: {result['message']}")
+                if result['status'] == 'success':
+                    print(f"Feeds: {', '.join(result['feeds'])}")
 
     except ValueError as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -758,8 +910,68 @@ def mcp_main():
                 }
             ),
             types.Tool(
+                name="qbt_get_rss_feeds",
+                description="Get all RSS feeds and folders. Use this to see what RSS feeds are configured before attaching rules to them.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "with_data": {
+                            "type": "boolean",
+                            "description": "Include feed items/articles in response (default: false)"
+                        }
+                    },
+                    "required": []
+                }
+            ),
+            types.Tool(
+                name="qbt_add_rss_feed",
+                description="Add a new RSS feed URL to qBittorrent",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "RSS feed URL"
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Optional folder path (e.g., 'TV Shows' or 'TV Shows\\Sci-Fi')"
+                        }
+                    },
+                    "required": ["url"]
+                }
+            ),
+            types.Tool(
+                name="qbt_remove_rss_feed",
+                description="Remove an RSS feed or folder",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Path to the feed or folder (e.g., 'TV Shows\\feedname')"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            ),
+            types.Tool(
+                name="qbt_refresh_rss_feed",
+                description="Manually refresh RSS feed(s) to check for new items",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Optional path to specific feed. If not provided, refreshes all feeds."
+                        }
+                    },
+                    "required": []
+                }
+            ),
+            types.Tool(
                 name="qbt_get_rss_rules",
-                description="Get all RSS auto-download rules",
+                description="Get all RSS auto-download rules. Shows which rules exist and what feeds they're attached to.",
                 inputSchema={
                     "type": "object",
                     "properties": {},
@@ -767,8 +979,27 @@ def mcp_main():
                 }
             ),
             types.Tool(
+                name="qbt_attach_rule_to_feeds",
+                description="Attach an existing RSS rule to specific feeds. This is CRITICAL - rules won't trigger unless attached to feeds!",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "rule_name": {
+                            "type": "string",
+                            "description": "Name of the RSS rule"
+                        },
+                        "feed_paths": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "List of feed paths to attach the rule to (e.g., ['TV Shows\\ShowRSS', 'folder\\feed2'])"
+                        }
+                    },
+                    "required": ["rule_name", "feed_paths"]
+                }
+            ),
+            types.Tool(
                 name="qbt_create_show_rss_rule",
-                description="Create an RSS rule to auto-download new episodes of a TV show. Perfect for 'automatically download new episodes' requests.",
+                description="Create an RSS rule to auto-download new episodes of a TV show. Perfect for 'automatically download new episodes' requests. IMPORTANT: You should attach the rule to specific feeds using feed_paths, otherwise it may not trigger!",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -791,6 +1022,11 @@ def mcp_main():
                         "save_path": {
                             "type": "string",
                             "description": "Optional: Path to save downloads"
+                        },
+                        "feed_paths": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional: List of feed paths to attach this rule to (e.g., ['TV Shows\\ShowRSS']). If not provided, applies to all feeds."
                         }
                     },
                     "required": ["show_name"]
@@ -945,11 +1181,72 @@ def mcp_main():
                     text=json.dumps(result, indent=2)
                 )]
 
+            elif name == "qbt_get_rss_feeds":
+                with_data = arguments.get('with_data', False) if arguments else False
+                data = qbt.get_rss_feeds(with_data=with_data)
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(data, indent=2)
+                )]
+
+            elif name == "qbt_add_rss_feed":
+                if not arguments or 'url' not in arguments:
+                    return [types.TextContent(
+                        type="text",
+                        text="Error: url argument required"
+                    )]
+
+                result = qbt.add_rss_feed(
+                    arguments['url'],
+                    path=arguments.get('path')
+                )
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(result, indent=2)
+                )]
+
+            elif name == "qbt_remove_rss_feed":
+                if not arguments or 'path' not in arguments:
+                    return [types.TextContent(
+                        type="text",
+                        text="Error: path argument required"
+                    )]
+
+                result = qbt.remove_rss_feed(arguments['path'])
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(result, indent=2)
+                )]
+
+            elif name == "qbt_refresh_rss_feed":
+                path = arguments.get('path') if arguments else None
+                result = qbt.refresh_rss_feed(path=path)
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(result, indent=2)
+                )]
+
             elif name == "qbt_get_rss_rules":
                 data = qbt.get_rss_rules()
                 return [types.TextContent(
                     type="text",
                     text=json.dumps(data, indent=2)
+                )]
+
+            elif name == "qbt_attach_rule_to_feeds":
+                if not arguments or 'rule_name' not in arguments or 'feed_paths' not in arguments:
+                    return [types.TextContent(
+                        type="text",
+                        text="Error: rule_name and feed_paths arguments required"
+                    )]
+
+                result = qbt.attach_rule_to_feeds(
+                    arguments['rule_name'],
+                    arguments['feed_paths']
+                )
+                return [types.TextContent(
+                    type="text",
+                    text=json.dumps(result, indent=2)
                 )]
 
             elif name == "qbt_create_show_rss_rule":
@@ -964,7 +1261,8 @@ def mcp_main():
                     season=arguments.get('season'),
                     quality=arguments.get('quality', '1080p'),
                     category=arguments.get('category'),
-                    save_path=arguments.get('save_path')
+                    save_path=arguments.get('save_path'),
+                    feed_paths=arguments.get('feed_paths')
                 )
                 return [types.TextContent(
                     type="text",

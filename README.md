@@ -138,14 +138,26 @@ The `qbtinfo.py` script manages torrent downloads and automation:
 # Add a torrent by magnet link or URL
 ./qbtinfo.py add "magnet:?xt=urn:btih:..." --path "/path/to/save" --category "TV Shows"
 
+# List RSS feeds
+./qbtinfo.py rss list-feeds
+
+# Add an RSS feed
+./qbtinfo.py rss add-feed "https://showrss.info/user/123456.rss?magnets=true&namespaces=true&name=null&quality=1080p" --folder "TV Shows"
+
+# Refresh RSS feeds
+./qbtinfo.py rss refresh
+
 # List RSS auto-download rules
-./qbtinfo.py rss list
+./qbtinfo.py rss list-rules
 
 # Create RSS rule for a show (auto-downloads new episodes)
-./qbtinfo.py rss add-show "Star Trek: Strange New Worlds" --season 2 --quality 1080p --category "TV Shows"
+./qbtinfo.py rss add-show "Star Trek: Strange New Worlds" --season 2 --quality 1080p --category "TV Shows" --feeds "TV Shows\ShowRSS"
+
+# Attach an existing rule to specific feeds
+./qbtinfo.py rss attach-rule "Star Trek: Strange New Worlds S02" "TV Shows\ShowRSS,TV Shows\EZTV"
 ```
 
-The RSS auto-download feature will automatically download new episodes as they appear in your RSS feeds, perfect for keeping up with currently airing shows.
+The RSS auto-download feature will automatically download new episodes as they appear in your RSS feeds, perfect for keeping up with currently airing shows. **Important**: Rules must be attached to specific feeds to trigger - use the `--feeds` parameter when creating rules or use `attach-rule` to attach existing rules.
 
 ### MCP Server Usage
 
@@ -259,10 +271,18 @@ The LLM will have access to these tools:
 - `qbt_get_search_plugins` - Get list of installed search plugins
 - `qbt_get_downloading_episodes` - HIGH-LEVEL: Parse currently downloading torrents to extract episode info (prevents duplicate downloads)
 
+**qBittorrent RSS Feed Management:**
+
+- `qbt_get_rss_feeds` - Get all RSS feeds and folders (use this to see what feeds are configured)
+- `qbt_add_rss_feed` - Add a new RSS feed URL
+- `qbt_remove_rss_feed` - Remove an RSS feed or folder
+- `qbt_refresh_rss_feed` - Manually refresh RSS feed(s) to check for new items
+
 **qBittorrent RSS Automation:**
 
-- `qbt_get_rss_rules` - Get all RSS auto-download rules
-- `qbt_create_show_rss_rule` - Create RSS rule to auto-download new episodes of a show
+- `qbt_get_rss_rules` - Get all RSS auto-download rules (shows which feeds they're attached to)
+- `qbt_create_show_rss_rule` - Create RSS rule to auto-download new episodes of a show (can specify feeds to attach)
+- `qbt_attach_rule_to_feeds` - Attach an existing rule to specific feeds (CRITICAL - rules won't trigger unless attached!)
 - `qbt_delete_rss_rule` - Delete an RSS auto-download rule
 
 #### Example MCP Usage Scenarios
@@ -295,7 +315,8 @@ With these tools, the LLM can help you with requests like:
   4. `plex_format_torrent_query("Star Trek Strange New Worlds", 2, 6, 2022, "1080p")` - Create search query
   5. _[User would search for torrent and get magnet link]_
   6. `qbt_add_torrent(magnet_link, save_path="/media/video/tv/Star Trek Strange New Worlds")` - Download to correct folder
-  7. `qbt_create_show_rss_rule("Star Trek Strange New Worlds", season=2, quality="1080p", save_path="/media/video/tv/Star Trek Strange New Worlds")` - Auto-download future episodes to same location
+  7. `qbt_get_rss_feeds()` - Check which RSS feeds are configured (e.g., "TV Shows\\ShowRSS")
+  8. `qbt_create_show_rss_rule("Star Trek Strange New Worlds", season=2, quality="1080p", save_path="/media/video/tv/Star Trek Strange New Worlds", feed_paths=["TV Shows\\ShowRSS"])` - Auto-download future episodes from specific feed to same location
 
 - **"Fill in my Doctor Who collection but skip the old episodes"** →
   1. `plex_find_missing_episodes("Doctor Who")` - Get all missing episodes
