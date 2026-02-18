@@ -16,23 +16,37 @@ I'd also like to fill in my Doctor Who collection, but I don't like the old ones
 
 This should setup RSS filters for "Star Trek: Strange New Worlds" and fill in your collection of "Doctor Who", putting all the files in the right place.
 
+You can also do more open-ended requests:
+
+```
+Based on what I watch on plex, especially recent additions, can you suggest some good movies?
+```
+
 ## Setup
 
 1. Make sure you have qbittorrent webui running, and plex. I have setup a docker-compose I use for this [here](https://github.com/konsumer/media-llm-server). You don't have to do it just like me, but it has everything you need to use this with your favorite LLM, and your media, and your safe VPN'd torrent-downloader.
 
 2. Install aitorrent:
+   ```sh
+   pip install aitorrent
+   ```
+
+   For development or if you want the latest unreleased version:
 
    **Option A: Standard pip install (development)**
+
    ```sh
    pip install -e .
    ```
 
    **Option B: pipx (recommended for CLI tools)**
+
    ```sh
    pipx install .
    ```
 
    **Option C: uv (modern, fast alternative)**
+
    ```sh
    uv pip install .
    # Or run without installing:
@@ -72,6 +86,13 @@ This should setup RSS filters for "Star Trek: Strange New Worlds" and fill in yo
    export PLEX_URL="http://localhost:32400"
    export PLEX_TOKEN="your_token_here"
    ```
+
+## For Developers
+
+See [DEVELOPER.md](DEVELOPER.md) for information on:
+- Setting up the development environment
+- Contributing to the project
+- Publishing new versions
 
 ## Tools
 
