@@ -1,120 +1,52 @@
-This an LLM-based torrent-manager. It has access to your Plex library and qbittorrent client, so it knows what you have and what you want.
+This a set of MCPs that can turn any LLM into a movie/tv downloading media-manager. It has access to your Plex library and qbittorrent client, so it knows what you have and what you want.
 
 [![asciicast](https://asciinema.org/a/lSxwZnB6zOWPHIrn.svg)](https://asciinema.org/a/lSxwZnB6zOWPHIrn)
 
-Give it a prompt like this:
-
-```md
-I prefer 1080p video, in general, because the quality/filesize balance is good.
-
-Right now I am watching these shows, so grab new episodes of that when they come out:
-
-- Star Trek: Strange New Worlds
-
-I'd also like to fill in my Doctor Who collection, but I don't like the old ones as much.
-```
-
-This should setup RSS filters for "Star Trek: Strange New Worlds" and fill in your collection of "Doctor Who", putting all the files in the right place.
-
-You can also do more open-ended requests:
-
-```
-Based on what I watch on plex, especially recent additions, can you suggest some good movies?
-```
-
 ## Setup
 
-1. Make sure you have qbittorrent webui running, and plex. I have setup a docker-compose I use for this [here](https://github.com/konsumer/media-llm-server). You don't have to do it just like me, but it has everything you need to use this with your favorite LLM, and your media, and your safe VPN'd torrent-downloader.
+### Configure credentials:
 
-2. Install aitorrent:
-   ```sh
-   pip install aitorrent
-   ```
+```sh
+cp .env.example .env
+# Edit .env with your Plex URL and token
+```
 
-   For development or if you want the latest unreleased version:
+**Plex Token**: Sign in at https://app.plex.tv, click any media item, click the three dots, select "Get Info", click "View XML" (bottom-left), and copy the `X-Plex-Token` value from the URL bar.
 
-   **Option A: Standard pip install (development)**
+**TMDB API Key (Optional)**: For finding missing episodes and searching for shows not in your library:
 
-   ```sh
-   pip install -e .
-   ```
+1. Create a free account at https://www.themoviedb.org
+2. Go to Settings > API (https://www.themoviedb.org/settings/api)
+3. Click "Request an API Key" (if you haven't already)
+4. Choose "Developer" and fill out the form (you can use "Personal project" for the application type)
+5. Once approved, copy the **API Key (v3 auth)** value (NOT the "API Read Access Token")
+6. Add it to `.env` as `TMDB_API_KEY=your_key_here`
 
-   **Option B: pipx (recommended for CLI tools)**
+**Important**: Use the "API Key (v3 auth)" field, which is a 32-character hexadecimal string. The "API Read Access Token" (JWT format starting with "eyJ") won't work with this tool.
 
-   ```sh
-   pipx install .
-   ```
-
-   **Option C: uv (modern, fast alternative)**
-
-   ```sh
-   uv pip install .
-   # Or run without installing:
-   uvx --from . aitorrent-plex-cli list
-   ```
-
-   After installation, you'll have these commands available:
-   - `aitorrent-plex` / `aitorrent-plex-cli` - Plex MCP server / CLI
-   - `aitorrent-tmdb` / `aitorrent-tmdb-cli` - TMDB MCP server / CLI
-   - `aitorrent-qbt` / `aitorrent-qbt-cli` - qBittorrent MCP server / CLI
-
-3. Configure credentials:
-
-   ```sh
-   cp .env.example .env
-   # Edit .env with your Plex URL and token
-   ```
-
-   **Plex Token**: Sign in at https://app.plex.tv, click any media item, click the three dots, select "Get Info", click "View XML" (bottom-left), and copy the `X-Plex-Token` value from the URL bar.
-
-   **TMDB API Key (Optional)**: For finding missing episodes and searching for shows not in your library:
-   1. Create a free account at https://www.themoviedb.org
-   2. Go to Settings > API (https://www.themoviedb.org/settings/api)
-   3. Click "Request an API Key" (if you haven't already)
-   4. Choose "Developer" and fill out the form (you can use "Personal project" for the application type)
-   5. Once approved, copy the **API Key (v3 auth)** value (NOT the "API Read Access Token")
-   6. Add it to `.env` as `TMDB_API_KEY=your_key_here`
-
-   **Important**: Use the "API Key (v3 auth)" field, which is a 32-character hexadecimal string. The "API Read Access Token" (JWT format starting with "eyJ") won't work with this tool.
-
-   **qBittorrent**: Make sure qBittorrent is running with Web UI enabled. Default credentials are admin/adminadmin, configured in Tools > Options > Web UI.
-
-4. Load environment variables:
-   ```sh
-   source .env
-   # Or export them manually:
-   export PLEX_URL="http://localhost:32400"
-   export PLEX_TOKEN="your_token_here"
-   ```
-
-## For Developers
-
-See [DEVELOPER.md](DEVELOPER.md) for information on:
-- Setting up the development environment
-- Contributing to the project
-- Publishing new versions
+**qBittorrent**: Make sure qBittorrent is running with Web UI enabled. Default credentials are admin/adminadmin, configured in Tools > Options > Web UI.
 
 ## Tools
 
 ### CLI Usage
 
-The `plexinfo.py` script can be used directly from the command line:
+You can run the CLI tools directly without installation using `uvx`:
 
 ```sh
 # List your collection names
-./plexinfo.py list
+uvx --from aitorrent aitorrent-plex-cli list
 
 # List all your shows (show/season/episode) in "TV Shows" collection
-./plexinfo.py list "TV Shows"
+uvx --from aitorrent aitorrent-plex-cli list "TV Shows"
 
 # List all your movies by collection in "Movies" collection
-./plexinfo.py list "Movies"
+uvx --from aitorrent aitorrent-plex-cli list "Movies"
 
 # List all your music by artist/album in "Music" collection
-./plexinfo.py list "Music"
+uvx --from aitorrent aitorrent-plex-cli list "Music"
 
 # Show what you're currently watching (on-deck and in-progress shows with relative times)
-./plexinfo.py watching
+uvx --from aitorrent aitorrent-plex-cli watching
 ```
 
 The `watching` command shows:
@@ -128,19 +60,19 @@ The `tmdbinfo.py` script searches The Movie Database (requires TMDB API key):
 
 ```sh
 # Search for TV shows
-./tmdbinfo.py search-shows "Star Trek Lower Decks"
+uvx --from aitorrent aitorrent-tmdb-cli search-shows "Star Trek Lower Decks"
 
 # Get detailed show information (seasons, episodes, air dates)
-./tmdbinfo.py show-details 85948
+uvx --from aitorrent aitorrent-tmdb-cli show-details 85948
 
 # Get specific season details
-./tmdbinfo.py season-details 85948 1
+uvx --from aitorrent aitorrent-tmdb-cli season-details 85948 1
 
 # Search for movies
-./tmdbinfo.py search-movies "The Matrix"
+uvx --from aitorrent aitorrent-tmdb-cli search-movies "The Matrix"
 
 # Get detailed movie information
-./tmdbinfo.py movie-details 603
+uvx --from aitorrent aitorrent-tmdb-cli movie-details 603
 ```
 
 This tool is useful for finding shows/movies not in your Plex library and getting episode air dates.
@@ -151,31 +83,31 @@ The `qbtinfo.py` script manages torrent downloads and automation:
 
 ```sh
 # List all torrents
-./qbtinfo.py list
+uvx --from aitorrent aitorrent-qbt-cli list
 
 # List only downloading torrents
-./qbtinfo.py list downloading
+uvx --from aitorrent aitorrent-qbt-cli list downloading
 
 # Add a torrent by magnet link or URL
-./qbtinfo.py add "magnet:?xt=urn:btih:..." --path "/path/to/save" --category "TV Shows"
+uvx --from aitorrent aitorrent-qbt-cli add "magnet:?xt=urn:btih:..." --path "/path/to/save" --category "TV Shows"
 
 # List RSS feeds
-./qbtinfo.py rss list-feeds
+uvx --from aitorrent aitorrent-qbt-cli rss list-feeds
 
 # Add an RSS feed
-./qbtinfo.py rss add-feed "https://showrss.info/user/123456.rss?magnets=true&namespaces=true&name=null&quality=1080p" --folder "TV Shows"
+uvx --from aitorrent aitorrent-qbt-cli rss add-feed "https://showrss.info/user/123456.rss?magnets=true&namespaces=true&name=null&quality=1080p" --folder "TV Shows"
 
 # Refresh RSS feeds
-./qbtinfo.py rss refresh
+uvx --from aitorrent aitorrent-qbt-cli rss refresh
 
 # List RSS auto-download rules
-./qbtinfo.py rss list-rules
+uvx --from aitorrent aitorrent-qbt-cli rss list-rules
 
 # Create RSS rule for a show (auto-downloads new episodes)
-./qbtinfo.py rss add-show "Star Trek: Strange New Worlds" --season 2 --quality 1080p --category "TV Shows" --feeds "TV Shows\ShowRSS"
+uvx --from aitorrent aitorrent-qbt-cli rss add-show "Star Trek: Strange New Worlds" --season 2 --quality 1080p --category "TV Shows" --feeds "TV Shows\ShowRSS"
 
 # Attach an existing rule to specific feeds
-./qbtinfo.py rss attach-rule "Star Trek: Strange New Worlds S02" "TV Shows\ShowRSS,TV Shows\EZTV"
+uvx --from aitorrent aitorrent-qbt-cli rss attach-rule "Star Trek: Strange New Worlds S02" "TV Shows\ShowRSS,TV Shows\EZTV"
 ```
 
 The RSS auto-download feature will automatically download new episodes as they appear in your RSS feeds, perfect for keeping up with currently airing shows. **Important**: Rules must be attached to specific feeds to trigger - use the `--feeds` parameter when creating rules or use `attach-rule` to attach existing rules.
@@ -190,7 +122,8 @@ Add to your LLMs MCP settings (`~/.claude.json`):
 {
   "mcpServers": {
     "plex-info": {
-      "command": "aitorrent-plex",
+      "command": "uvx",
+      "args": ["--from", "aitorrent", "aitorrent-plex"],
       "env": {
         "PLEX_URL": "http://localhost:32400",
         "PLEX_TOKEN": "your_plex_token_here",
@@ -198,13 +131,15 @@ Add to your LLMs MCP settings (`~/.claude.json`):
       }
     },
     "tmdb-info": {
-      "command": "aitorrent-tmdb",
+      "command": "uvx",
+      "args": ["--from", "aitorrent", "aitorrent-tmdb"],
       "env": {
         "TMDB_API_KEY": "your_tmdb_api_key_here"
       }
     },
     "qbt-info": {
-      "command": "aitorrent-qbt",
+      "command": "uvx",
+      "args": ["--from", "aitorrent", "aitorrent-qbt"],
       "env": {
         "QBT_URL": "http://localhost:8080",
         "QBT_USERNAME": "admin",
@@ -222,17 +157,17 @@ claude mcp add plex-info --transport stdio \
   --env PLEX_URL=http://localhost:32400 \
   --env PLEX_TOKEN=your_plex_token_here \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- aitorrent-plex
+  -- uvx --from aitorrent aitorrent-plex
 
 claude mcp add tmdb-info --transport stdio \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- aitorrent-tmdb
+  -- uvx --from aitorrent aitorrent-tmdb
 
 claude mcp add qbt-info --transport stdio \
   --env QBT_URL=http://localhost:8080 \
   --env QBT_USERNAME=admin \
   --env QBT_PASSWORD=adminadmin \
-  -- aitorrent-qbt
+  -- uvx --from aitorrent aitorrent-qbt
 ```
 
 The LLM will have access to these tools:
