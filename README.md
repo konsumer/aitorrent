@@ -4,6 +4,14 @@ This a set of MCPs that can turn any LLM into a movie/tv downloading media-manag
 
 ## Setup
 
+The easiest way to set it up is with [skills](https://agentskills.io/):
+
+```sh
+npx skills add konsumer/aitorrent
+```
+
+Make sure you have the env-vars in `.env.example` in your environment, and you should be good-to-go.
+
 ### Configure credentials:
 
 ```sh
