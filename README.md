@@ -131,7 +131,7 @@ Add to your LLMs MCP settings (`~/.claude.json`):
   "mcpServers": {
     "plex-info": {
       "command": "uvx",
-      "args": ["--from", "aitorrent", "aitorrent-plex"],
+      "args": ["--from", "aitorrent", "aitorrent-plex", "mcp"],
       "env": {
         "PLEX_URL": "http://localhost:32400",
         "PLEX_TOKEN": "your_plex_token_here",
@@ -140,14 +140,14 @@ Add to your LLMs MCP settings (`~/.claude.json`):
     },
     "tmdb-info": {
       "command": "uvx",
-      "args": ["--from", "aitorrent", "aitorrent-tmdb"],
+      "args": ["--from", "aitorrent", "aitorrent-tmdb", "mcp"],
       "env": {
         "TMDB_API_KEY": "your_tmdb_api_key_here"
       }
     },
     "qbt-info": {
       "command": "uvx",
-      "args": ["--from", "aitorrent", "aitorrent-qbt"],
+      "args": ["--from", "aitorrent", "aitorrent-qbt", "mcp"],
       "env": {
         "QBT_URL": "http://localhost:8080",
         "QBT_USERNAME": "admin",
@@ -165,17 +165,17 @@ claude mcp add plex-info --transport stdio \
   --env PLEX_URL=http://localhost:32400 \
   --env PLEX_TOKEN=your_plex_token_here \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- uvx --from aitorrent aitorrent-plex
+  -- uvx --from aitorrent aitorrent-plex mcp
 
 claude mcp add tmdb-info --transport stdio \
   --env TMDB_API_KEY=your_tmdb_api_key_here \
-  -- uvx --from aitorrent aitorrent-tmdb
+  -- uvx --from aitorrent aitorrent-tmdb mcp
 
 claude mcp add qbt-info --transport stdio \
   --env QBT_URL=http://localhost:8080 \
   --env QBT_USERNAME=admin \
   --env QBT_PASSWORD=adminadmin \
-  -- uvx --from aitorrent aitorrent-qbt
+  -- uvx --from aitorrent aitorrent-qbt mcp
 ```
 
 The LLM will have access to these tools:
